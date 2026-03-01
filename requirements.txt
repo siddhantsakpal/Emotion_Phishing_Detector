@@ -1,0 +1,30 @@
+flask
+transformers
+torch
+scikit-learn
+numpy
+pandas
+regex
+colorama
+imapclient
+beautifulsoup4
+lxml
+tldextract
+
+structure of website
+
+emotion_phishing_detector/
+├── src/                # your current code
+├── web/                # new website files
+│   ├── app.py          # Flask wrapper
+│   ├── templates/      # HTML pages
+│   │   ├── index.html  # home page
+│   │   ├── paste.html  # paste email
+│   │   ├── file.html   # single file
+│   │   ├── folder.html # batch folder
+│   │   └── imap.html   # IMAP email fetch
+│   └── static/         # CSS, JS, images
+├── data/
+├── models/
+├── venv/
+└── requirements.txt
