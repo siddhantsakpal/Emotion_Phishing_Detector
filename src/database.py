@@ -1,14 +1,18 @@
 #database.py
 import os
 import mysql.connector
+from dotenv import load_dotenv
 
+dotenv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+load_dotenv(dotenv_path)
 
 def get_db_connection():
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",    # ← put your password directly here
-        database="emotion_phishing_dbs"
+        host=os.getenv("DB_HOST", "localhost"),
+        user=os.getenv("DB_USER", "root"),
+        password=os.getenv("DB_PASSWORD", ""),
+        database=os.getenv("DB_NAME", "emotion_phishing_dbs")
+    
     )
 def log_analysis(result):
     """Saves the AI's results into MySQL."""

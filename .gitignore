@@ -1,0 +1,45 @@
+# ── Virtual Environment ──
+venv/
+env/
+.venv/
+
+# ── ML Models (too large + private) ──
+models/
+*.pkl
+*.h5
+*.pt
+*.pth
+
+# ── Training Data (keep private) ──
+data/
+
+# ── Python Cache ──
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ── Environment Variables (contains passwords) ──
+.env
+
+# ── Database ──
+*.db
+*.sqlite
+
+# ── VS Code ──
+.vscode/
+
+# ── Windows ──
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# ── Mac ──
+.DS_Store
+
+# ── Logs ──
+*.log
+logs/
+
+# ── Deployment (not needed for GitHub) ──
+Procfile
