@@ -5,7 +5,7 @@ function getRiskDetails(decision) {
     if (d === "phishing")   return { color: "#ff3d57" };
     if (d === "suspicious") return { color: "#ffaa00" };
     if (d === "unknown")    return { color: "#a855f7" };
-    return { color: "#00e096" }; // legitimate
+    return { color: "#00e096" };
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -14,11 +14,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
-    const result = window.RESULT_DATA;
-    const dec    = (result.decision || "").trim().toLowerCase();
+    const result   = window.RESULT_DATA;
+    const dec      = (result.decision || "").trim().toLowerCase();
     const riskInfo = getRiskDetails(dec);
 
-    // FIX: Use final overridden percentages instead of raw ml_probs_combined
     const confidence = {
         phishing:   (result.phishing_pct   || 0) / 100,
         suspicious: (result.suspicious_pct || 0) / 100,
@@ -27,67 +26,90 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const emotions = result.emotions || {};
 
-    // FIX: Gauge shows dominant probability based on final decision
-    // Uses lowercase comparison to avoid casing bugs
     let gaugePercent;
     if      (dec === "phishing")   gaugePercent = Math.round(confidence.phishing   * 100);
     else if (dec === "suspicious") gaugePercent = Math.round(confidence.suspicious * 100);
     else if (dec === "unknown")    gaugePercent = 50;
     else                           gaugePercent = Math.round(confidence.legitimate * 100);
 
-    const displayPercent = Math.max(gaugePercent, 5); // min visible fill
+    const displayPercent = Math.max(gaugePercent, 5);
 
     /* =============================
-       CENTER TEXT PLUGIN
+       THEME HELPER
     ============================= */
-    const centerTextPlugin = {
-        id: "centerText",
-        afterDraw(chart, args, options) {
-            const { ctx, chartArea } = chart;
-            if (!chartArea) return;
-            ctx.save();
-            ctx.font      = "bold 28px Arial";
-            ctx.fillStyle = riskInfo.color;
-            ctx.textAlign = "center";
-            ctx.fillText(
-                options.text,
-                (chartArea.left + chartArea.right) / 2,
-                chartArea.bottom - 30
-            );
-            ctx.restore();
-        }
-    };
+    function isDarkMode() {
+        return document.documentElement.getAttribute("data-theme") !== "light";
+    }
 
     /* =============================
-       RISK GAUGE
-    ============================= */
-    const gaugeData   = dec === "unknown" ? [50, 50] : [displayPercent, 100 - displayPercent];
-    const gaugeColors = [riskInfo.color, "#e0e0e0"];
-    const gaugeCenterText = dec === "unknown" ? "?" : `${gaugePercent}%`;
+   CENTER TEXT PLUGIN
+============================= */
+const centerTextPlugin = {
+    id: "centerText",
+    afterDraw(chart, args, options) {
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return;
+        ctx.save();
+        ctx.font      = "bold 28px Arial";
+        ctx.fillStyle = riskInfo.color;
+        ctx.textAlign = "center";
+        ctx.fillText(
+            options.text,
+            (chartArea.left + chartArea.right) / 2,
+            chartArea.bottom - 30
+        );
+        ctx.restore();
+    }
+};
 
-    new Chart(document.getElementById("riskGauge"), {
-        type: "doughnut",
-        data: {
-            datasets: [{
-                data:            gaugeData,
-                backgroundColor: gaugeColors,
-                borderWidth:     0,
-                borderRadius:    0
-            }]
-        },
-        options: {
-            rotation:      -90,
-            circumference: 180,
-            cutout:        "70%",
-            plugins: {
-                legend:     { display: false },
-                tooltip:    { enabled: false },
-                centerText: { text: gaugeCenterText }
+/* =============================
+   RISK GAUGE
+============================= */
+const gaugeData   = dec === "unknown" ? [50, 50] : [displayPercent, 100 - displayPercent];
+const gaugeColors = [riskInfo.color, "rgba(128,128,128,0.15)"];
+const gaugeCenterText = dec === "unknown" ? "?" : `${gaugePercent}%`;
+
+const gaugeLabel = dec === "phishing"   ? "🔴 High Risk"  :
+                   dec === "suspicious" ? "🟠 Suspicious" :
+                   dec === "unknown"    ? "⚪ Unknown"     :
+                                         "🟢 Legitimate";
+
+new Chart(document.getElementById("riskGauge"), {
+    type: "doughnut",
+    data: {
+        labels: [gaugeLabel, ""],
+        datasets: [{
+            data:            gaugeData,
+            backgroundColor: gaugeColors,
+            borderWidth:     0,
+            borderRadius:    0
+        }]
+    },
+    options: {
+        rotation:      -90,
+        circumference: 180,
+        cutout:        "70%",
+        plugins: {
+            legend:  { display: false },
+            tooltip: {
+                enabled:     true,
+                filter:      (item) => item.dataIndex === 0,
+                callbacks: {
+                    label: (ctx) => ` ${gaugeLabel} — ${gaugePercent}%`
+                },
+                backgroundColor: riskInfo.color,
+                titleColor:      "#000000",
+                bodyColor:       "#000000",
+                padding:         10,
+                cornerRadius:    8,
+                displayColors:   false,
             },
-            animation: { animateRotate: true, duration: 1000 }
+            centerText: { text: gaugeCenterText }
         },
-        plugins: [centerTextPlugin]
-    });
+        animation: { animateRotate: true, duration: 1000 }
+    },
+    plugins: [centerTextPlugin]
+});
 
     /* =============================
        BAR GRAPH
@@ -100,6 +122,9 @@ document.addEventListener("DOMContentLoaded", () => {
             "<p style='color:#a855f7; text-align:center; padding:20px; font-family:monospace;'>" +
             "⚠️ No confidence data — sender unknown to system.</p>";
     } else {
+        const tickCol  = isDarkMode() ? "#9aa0b0" : "#7a8298";
+        const gridCol  = isDarkMode() ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+
         new Chart(barCanvas, {
             type: "bar",
             data: {
@@ -119,7 +144,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     y: {
                         min: 0,
                         max: 100,
-                        ticks: { callback: v => v + "%" }
+                        ticks: { color: tickCol, callback: v => v + "%" },
+                        grid:  { color: gridCol }
+                    },
+                    x: {
+                        ticks: { color: tickCol },
+                        grid:  { color: gridCol }
                     }
                 },
                 plugins: {
@@ -135,7 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /* =============================
-       EMOTION RADAR
+       EMOTION RADAR — DARK MODE FIX
     ============================= */
     const radarCanvas = document.getElementById("emotionRadar");
 
@@ -145,6 +175,10 @@ document.addEventListener("DOMContentLoaded", () => {
             "<p style='color:#a855f7; text-align:center; padding:20px; font-family:monospace;'>" +
             "⚠️ No emotion data available.</p>";
     } else {
+       const dark       = document.documentElement.getAttribute("data-theme") === "dark";
+const gridColor  = "rgba(128,128,128,0.4)";
+const tickColor  = "#888888";
+const labelColor = "#888888";
         new Chart(radarCanvas, {
             type: "radar",
             data: {
@@ -153,7 +187,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     data:                 Object.values(emotions),
                     backgroundColor:      "rgba(0,229,255,0.15)",
                     borderColor:          "#00e5ff",
-                    pointBackgroundColor: "#00e5ff"
+                    borderWidth:          2,
+                    pointBackgroundColor: "#00e5ff",
+                    pointBorderColor:     "#00e5ff",
+                    pointRadius:          4,
                 }]
             },
             options: {
@@ -161,7 +198,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     r: {
                         min: 0,
                         max: 1,
-                        ticks: { callback: v => Math.round(v * 100) + "%" }
+                        angleLines:  { color: gridColor },
+                        grid:        { color: gridColor },
+                        pointLabels: {
+                            color: labelColor,
+                            font:  { size: 12, family: "'JetBrains Mono', monospace" }
+                        },
+                        ticks: {
+                            color:         tickColor,
+                            backdropColor: "transparent",
+                            font:          { size: 10 },
+                            callback: v => Math.round(v * 100) + "%"
+                        }
                     }
                 },
                 plugins: { legend: { display: false } }
