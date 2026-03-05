@@ -1,47 +1,63 @@
-# STEP 4: Now imports emotion_risk_boost instead of using manual if/else
+#false_positive_guard.py
 from emotion_detector import emotion_risk_boost
 
 
 def suppress_false_positive(decision_data, ml_probs, brand_info, links, emotions):
-
-    phishing   = decision_data.get("phishing",   decision_data.get("phishing_pct",   0))
-    legitimate = decision_data.get("legitimate", decision_data.get("legit_pct",      0))
+    """
+    Final safety net — adjusts scores AFTER collaborative scoring.
+    Much lighter touch now since layers already voted together.
+    Only applies meaningful adjustments, never overrides verified brand.
+    """
+    phishing   = decision_data.get("phishing",   0.0)
+    legitimate = decision_data.get("legitimate", 0.0)
+    suspicious = decision_data.get("suspicious", 0.0)
 
     if phishing   > 1: phishing   /= 100.0
     if legitimate > 1: legitimate /= 100.0
+    if suspicious > 1: suspicious /= 100.0
 
-    suspicious  = 1.0 - (phishing + legitimate)
     adjustments = []
 
     brand_verified      = brand_info and brand_info.get("status") == "verified"
+    brand_impersonation = brand_info and brand_info.get("status") == "impersonation"
     no_suspicious_links = not any(l.get("status") == "Suspicious" for l in links)
+    all_links_safe      = all(l.get("status") == "Safe" for l in links) if links else True
 
-    # -----------------------------
-    # 1️⃣ Strong Brand Protection
-    # -----------------------------
+    # ── 1. Verified brand + all safe links → maximize legitimate ──
     if brand_verified and no_suspicious_links:
-        phishing   *= 0.4
-        legitimate += 0.25
-        adjustments.append("Strong verified brand protection applied.")
+        phishing    = min(phishing * 0.3, 0.05)
+        legitimate  = max(legitimate, 0.90)
+        suspicious  = 1.0 - phishing - legitimate
+        adjustments.append("Verified brand — scores suppressed toward legitimate.")
 
-    # -----------------------------
-    # 2️⃣ STEP 4: Use emotion_risk_boost instead of manual threshold
-    # Cleaner, uses all emotions not just fear/surprise
-    # -----------------------------
-    if not brand_verified:
+    # ── 2. Impersonation → maximize phishing ──
+    elif brand_impersonation:
+        phishing   = max(phishing, 0.85)
+        legitimate = min(legitimate, 0.05)
+        suspicious = 1.0 - phishing - legitimate
+        adjustments.append("Brand impersonation detected — phishing score maximized.")
+
+    # ── 3. Unknown sender + all links safe + low emotions → reduce phishing ──
+    elif not brand_verified and all_links_safe:
         boost = emotion_risk_boost(emotions)
-        if boost > 0.05:   # only apply if meaningful
-            phishing  *= (1.0 + boost)
-            adjustments.append(f"Emotion risk boost applied: +{boost}")
+        if boost < 0.05:
+            # Professional/legitimate looking email — reduce phishing
+            phishing   = min(phishing, 0.45)
+            adjustments.append("Safe links + neutral emotion — phishing score capped.")
+        elif boost > 0.10:
+            # Emotional manipulation detected — boost phishing slightly
+            phishing *= (1.0 + boost * 0.5)
+            adjustments.append(f"Emotion risk boost applied: +{round(boost * 0.5, 3)}")
 
-    # -----------------------------
-    # 3️⃣ Recalculate suspicious
-    # -----------------------------
-    suspicious = max(0.0, 1.0 - (phishing + legitimate))
+    # ── 4. Suspicious links present + no brand → boost phishing ──
+    elif not brand_verified and not no_suspicious_links:
+        phishing = min(phishing * 1.2, 0.95)
+        adjustments.append("Suspicious links detected — phishing score boosted.")
 
-    # -----------------------------
-    # 4️⃣ Normalize
-    # -----------------------------
+    # ── 5. Recalculate suspicious ──
+    suspicious = max(0.0, 1.0 - phishing - legitimate)
+
+    # ── 6. Normalize ──
     total = phishing + suspicious + legitimate
     if total > 0:
         phishing   /= total
@@ -52,5 +68,5 @@ def suppress_false_positive(decision_data, ml_probs, brand_info, links, emotions
         "phishing":    round(phishing,   3),
         "suspicious":  round(suspicious, 3),
         "legitimate":  round(legitimate, 3),
-        "adjustments": adjustments
+        "adjustments": adjustments,
     }
