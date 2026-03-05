@@ -317,10 +317,10 @@ def analyze_email(text):
     else:
         # FIX: Lowered threshold for impersonation emails
         # so 74% phishing score correctly triggers Phishing decision
-        if phishing > 0.6 or brand_info["status"] == "impersonation" and phishing > 0.4:
+        if phishing > 0.65 or brand_info["status"] == "impersonation" and phishing > 0.4:
             decision = "Phishing"
             note     = "Multiple high-risk indicators detected."
-        elif suspicious > 0.65:
+        elif suspicious >  0.65:
             decision = "Suspicious"
             note     = "Some indicators look suspicious."
         else:

@@ -47,6 +47,12 @@ SAFE_DOMAINS = {
     "atlassian.com", "jira.com", "confluence.com",
     "adobe.com", "canva.com",
     "notion.so", "trello.com",
+    # Educational / Professional
+   "idp.com", "ielts.org", "britishcouncil.org",
+   "coursera.org", "udemy.com", "edx.org",
+   "linkedin.com", "naukri.com", "indeed.com",
+   # Indian professional
+   "timesjobs.com", "shine.com", "monsterindia.com",
 }
 
 TRUSTED_BRAND_PROFILES = {
@@ -269,11 +275,11 @@ PHISHING_KEYWORDS = [
     "account locked", "account temporarily blocked",
     "verify your account", "confirm identity",
     "atm block", "atm blocked", "debit card blocked",
-    "credit card blocked", "share otp", "otp",
+    "credit card blocked", "share otp",
     "kyc update", "kyc pending", "verify kyc",
     "unusual transaction", "password reset",
     "login required", "delivery issue",
-    "update your order", "security alert",
+    "update your order",
 
     # Medium risk
     "verify", "account", "password", "login", "secure",
@@ -282,8 +288,8 @@ PHISHING_KEYWORDS = [
     "customer care",
 
     # Low risk — common in both phishing and legitimate
-    "bill", "billing", "invoice", "payment", "subscription",
-    "order", "receipt", "transaction", "statement", "amount",
+    "bill", "billing", "invoice", "payment", "subscription","otp"
+    "order", "receipt", "transaction", "statement", "amount","security alert",
     "delivery", "delivered", "shipment", "tracking", "package",
 ]
 
