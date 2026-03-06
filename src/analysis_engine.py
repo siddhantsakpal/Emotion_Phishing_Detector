@@ -4,7 +4,7 @@ from emotion_detector import detect_emotion
 from keyword_detector import detect_keywords
 from phishing_models import ml_predict
 from trained_model import trained_ml_predict
-from preprocess import clean_text
+from preprocess import clean_text, clean_for_emotion
 from main_helpers import get_sender_domain, TRUSTED_BRAND_PROFILES
 from false_positive_guard import suppress_false_positive
 import tldextract
@@ -328,7 +328,8 @@ def analyze_email(text):
     )
 
     # ── Step 5: Emotions ──
-    emotions = detect_emotion(cleaned)
+    emotion_text = clean_for_emotion(cleaned)
+    emotions = detect_emotion(emotion_text)
 
     # ── Step 6: Dual ML Models ──
     hf_probs      = ml_predict(cleaned)

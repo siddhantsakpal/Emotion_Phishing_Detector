@@ -52,21 +52,30 @@ def detect_emotion(text):
     return emotions
 
 
-# ---------------------------------------------------------------
-# STEP 4: emotion_risk_boost — wired in from dead code
-# Converts emotion scores into a single risk boost number.
-# Cleaner than the manual if/else in false_positive_guard.py
-# ---------------------------------------------------------------
 def emotion_risk_boost(emotions: dict) -> float:
     """
     Returns a risk boost float (0.0 → 0.3) based on detected emotions.
-    High fear/anger/surprise = higher phishing risk.
-    High neutral = lower risk.
-    Used by false_positive_guard.py instead of manual thresholds.
+    FIX: Only counts fear/anger/surprise if they are GENUINELY high.
+    Low-level fear (< 0.30) is ignored — very common in normal emails
+    that contain words like "suspicious", "block", "security" in footers.
+    FIX: Strong neutral/joy cancels boost entirely.
     """
-    boost = 0.0
-    boost += emotions.get("fear",     0) * 0.25
-    boost += emotions.get("anger",    0) * 0.20
-    boost += emotions.get("surprise", 0) * 0.15
-    boost -= emotions.get("neutral",  0) * 0.10
+    fear     = emotions.get("fear",     0)
+    anger    = emotions.get("anger",    0)
+    surprise = emotions.get("surprise", 0)
+    neutral  = emotions.get("neutral",  0)
+    joy      = emotions.get("joy",      0)
+
+    # Only count emotion if it crosses minimum threshold
+    # Prevents footer words from triggering boost
+    fear_contribution     = max(0, fear     - 0.30) * 0.50
+    anger_contribution    = max(0, anger    - 0.25) * 0.40
+    surprise_contribution = max(0, surprise - 0.25) * 0.25
+
+    boost = fear_contribution + anger_contribution + surprise_contribution
+
+    # Strong neutral or joy = professional/friendly email — cancel boost
+    if neutral + joy > 0.60:
+        boost *= 0.2
+
     return round(max(boost, 0.0), 3)

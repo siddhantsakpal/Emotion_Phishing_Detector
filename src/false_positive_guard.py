@@ -40,14 +40,23 @@ def suppress_false_positive(decision_data, ml_probs, brand_info, links, emotions
     # ── 3. Unknown sender + all links safe + low emotions → reduce phishing ──
     elif not brand_verified and all_links_safe:
         boost = emotion_risk_boost(emotions)
+
         if boost < 0.05:
-            # Professional/legitimate looking email — reduce phishing
             phishing   = min(phishing, 0.45)
             adjustments.append("Safe links + neutral emotion — phishing score capped.")
+
         elif boost > 0.10:
-            # Emotional manipulation detected — boost phishing slightly
-            phishing *= (1.0 + boost * 0.5)
-            adjustments.append(f"Emotion risk boost applied: +{round(boost * 0.5, 3)}")
+            # FIX: Only boost if keywords ALSO agree — prevents footer words
+            # from causing emotion boost on clean legitimate emails
+            rule_score = ml_probs.get("rule_score", 0) if ml_probs else 0
+            keyword_also_risky = rule_score > 0.15
+
+            if keyword_also_risky:
+                phishing *= (1.0 + boost * 0.5)
+                adjustments.append(f"Emotion+keyword risk boost: +{round(boost * 0.5, 3)}")
+            else:
+                # Emotion triggered but keywords say clean — ignore emotion boost
+                adjustments.append("Emotion signal ignored — keywords show no risk.")
 
     # ── 4. Suspicious links present + no brand → boost phishing ──
     elif not brand_verified and not no_suspicious_links:

@@ -184,7 +184,7 @@ const labelColor = "#888888";
             data: {
                 labels: Object.keys(emotions),
                 datasets: [{
-                    data:                 Object.values(emotions),
+                    data:                 Object.values(emotions).map(v => v < 0.08 ? 0 : v),
                     backgroundColor:      "rgba(0,229,255,0.15)",
                     borderColor:          "#00e5ff",
                     borderWidth:          2,
