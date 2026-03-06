@@ -1,3 +1,4 @@
+#emotion_detector.py
 from transformers import pipeline
 
 # Global variable for Lazy Loading
